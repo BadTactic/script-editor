@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { saveAs } from "file-saver";
 
 function getRandomColor() {
   return `hsl(${Math.floor(Math.random() * 360)}, 60%, 60%)`;
@@ -83,7 +82,9 @@ export default function ScriptEditor() {
     URL.revokeObjectURL(url);
   }
 
-  function downloadRHR() {
+  async function downloadRHR() {
+    const { saveAs } = await import("file-saver");
+
     const chrList = characters.map(c => `      <chr>\n        <chrId>${c.id}</chrId>\n        <shortName>${c.name}</shortName>\n        <color>${parseInt(c.color.replace('#', '0x'), 16)}</color>\n        <chrSelf>false</chrSelf>\n        <ttsVoiceIds/>\n        <voicePitch>800</voicePitch>\n        <voiceSpeed>1100</voiceSpeed>\n        <showRecBtn>false</showRecBtn>\n      </chr>`).join("\n");
 
     const scrLines = lines.map((l, i) => `    <ln id="${i}" chrId="${l.character.id}">${l.text}</ln>`).join("\n");
@@ -91,12 +92,7 @@ export default function ScriptEditor() {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<rehearserScript>\n  <rhrFileVersion>4</rhrFileVersion>\n  <scriptId>${Date.now()}</scriptId>\n  <scriptName>Exported Script</scriptName>\n  <languageCode>en</languageCode>\n  <countryCode>US</countryCode>\n  <chrs>\n${chrList}\n  </chrs>\n  <scr>\n${scrLines}\n  </scr>\n</rehearserScript>`;
 
     const blob = new Blob([xml], { type: "application/xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "script.rhr";
-    a.click();
-    URL.revokeObjectURL(url);
+    saveAs(blob, "script.rhr");
   }
 
   return (
