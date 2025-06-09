@@ -27,59 +27,38 @@ export default function ScriptEditor() {
     setNewCharacterColor("#000000");
   }
 
-  function handleAddLine() {
-    const trimmed = input.trim();
-    if (!trimmed) return;
+  function handleScriptChange(e) {
+    const value = e.target.value;
+    setInput(value);
+    const parsedLines = value.split("\n").map((line, index) => {
+      const trimmed = line.trim();
+      if (!trimmed) return null;
 
-    let type = "dialogue";
-    let character = characters[0];
+      let type = "dialogue";
+      let character = characters[0];
 
-    if (trimmed.startsWith("::") || trimmed.startsWith("/sd") || trimmed.startsWith("(")) {
-      type = "stage";
-      character = characters.find(c => c.name === "Stage Directions");
-    } else {
-      const nameMatch = trimmed.match(/^([A-Z][A-Z0-9 ]+):/);
-      if (nameMatch) {
-        const name = nameMatch[1].trim();
-        character = characters.find(c => c.name === name) || {
-          id: Date.now().toString(),
-          name,
-          color: getRandomColor(),
-        };
-        if (!characters.find(c => c.name === name)) {
-          setCharacters([...characters, character]);
+      if (trimmed.startsWith("::") || trimmed.startsWith("/sd") || trimmed.startsWith("(")) {
+        type = "stage";
+        character = characters.find(c => c.name === "Stage Directions");
+      } else {
+        const nameMatch = trimmed.match(/^([A-Z][A-Z0-9 ]+):/);
+        if (nameMatch) {
+          const name = nameMatch[1].trim();
+          character = characters.find(c => c.name === name) || {
+            id: Date.now().toString(),
+            name,
+            color: getRandomColor(),
+          };
+          if (!characters.find(c => c.name === name)) {
+            setCharacters(prev => [...prev, character]);
+          }
         }
       }
-    }
 
-    setLines([
-      ...lines,
-      { text: trimmed, type, character }
-    ]);
-    setInput("");
-  }
+      return { text: trimmed, type, character };
+    }).filter(Boolean);
 
-  function highlightAsStageDirection() {
-    if (!input.trim()) return;
-    const stageLine = `(${input.trim()})`;
-    const stageCharacter = characters.find(c => c.name === "Stage Directions");
-    setLines([...lines, { text: stageLine, type: "stage", character: stageCharacter }]);
-    setInput("");
-  }
-
-  function downloadTXT() {
-    const content = lines.map(l => {
-      if (l.type === "stage") return `(${l.text})`;
-      return `\n\n${l.character.name}\n${l.text.replace(l.character.name + ":", "").trim()}`;
-    }).join("\n");
-
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "script.txt";
-    a.click();
-    URL.revokeObjectURL(url);
+    setLines(parsedLines);
   }
 
   async function downloadRHR() {
@@ -96,7 +75,8 @@ export default function ScriptEditor() {
   }
 
   return (
-    <div style={{ padding: '1rem' }}>
+    <div style={{ padding: '1rem', fontFamily: 'sans-serif' }}>
+      {/* Character Configuration Section */}
       <div style={{ marginBottom: '1rem' }}>
         <h3>Add Character</h3>
         <input
@@ -113,39 +93,59 @@ export default function ScriptEditor() {
           style={{ marginRight: '1rem' }}
         />
         <button onClick={handleAddCharacter}>Add Character</button>
-      </div>
-      <div style={{ display: 'flex', gap: '2rem' }}>
-        <div style={{ flex: 1 }}>
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type a line of dialogue or stage direction..."
-            rows={10}
-            style={{ width: '100%', fontSize: '1.1rem' }}
-          />
-          <div style={{ marginTop: '1rem' }}>
-            <button onClick={handleAddLine}>Add Line</button>
-            <button onClick={highlightAsStageDirection} style={{ marginLeft: '1rem' }}>Make Stage Direction</button>
-            <button onClick={downloadTXT} style={{ marginLeft: '1rem' }}>Export .txt</button>
-            <button onClick={downloadRHR} style={{ marginLeft: '1rem' }}>Export .rhr</button>
-          </div>
-        </div>
-        <div style={{ flex: 1, backgroundColor: '#f9f9f9', padding: '1rem' }}>
-          {lines.map((line, idx) => (
-            <div key={idx} style={{ marginBottom: '1rem' }}>
-              {line.type === "stage" ? (
-                <p style={{ fontStyle: 'italic', color: '#555' }}>({line.text})</p>
-              ) : (
-                <>
-                  <p style={{ fontWeight: 'bold', color: line.character.color }}>
-                    {line.character.name}
-                  </p>
-                  <p>{line.text.replace(line.character.name + ":", "").trim()}</p>
-                </>
-              )}
-            </div>
+        <div style={{ marginTop: '0.5rem' }}>
+          {characters.map((char) => (
+            <span
+              key={char.id}
+              style={{
+                marginRight: '1rem',
+                color: char.color,
+                fontWeight: 'bold',
+              }}
+            >
+              {char.name}
+            </span>
           ))}
         </div>
+      </div>
+
+      {/* Script Editing and Preview Side-by-Side */}
+      <div style={{ display: 'flex', gap: '2rem' }}>
+        <div style={{ flex: 1 }}>
+          <h4>Paste Script</h4>
+          <textarea
+            value={input}
+            onChange={handleScriptChange}
+            placeholder="Paste or type script here..."
+            rows={20}
+            style={{ width: '100%', fontSize: '1rem', padding: '0.5rem' }}
+          />
+        </div>
+
+        <div style={{ flex: 1 }}>
+          <h4>Live Preview</h4>
+          <div style={{ backgroundColor: '#f9f9f9', padding: '1rem', minHeight: '500px' }}>
+            {lines.map((line, idx) => (
+              <div key={idx} style={{ marginBottom: '1rem' }}>
+                {line.type === "stage" ? (
+                  <p style={{ fontStyle: 'italic', color: '#555' }}>{line.text}</p>
+                ) : (
+                  <>
+                    <p style={{ fontWeight: 'bold', color: line.character.color }}>{line.character.name}</p>
+                    <p>{line.text.replace(line.character.name + ":", "").trim()}</p>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Export Button */}
+      <div style={{ marginTop: '2rem', textAlign: 'center' }}>
+        <button onClick={downloadRHR} style={{ padding: '0.5rem 2rem', fontSize: '1rem' }}>
+          Export .rhr
+        </button>
       </div>
     </div>
   );
