@@ -46,7 +46,7 @@ export default function App() {
   function downloadTXT() {
     const content = lines.map(l => {
       if (l.type === "stage") return `(${l.text})`;
-      return `\n\n${l.character.name}\n${l.text.replace(\`\${l.character.name}:\`, "").trim()}`;
+      return `\n\n${l.character.name}\n${l.text.replace(l.character.name + ":", "").trim()}`;
     }).join("\n");
 
     const blob = new Blob([content], { type: "text/plain" });
